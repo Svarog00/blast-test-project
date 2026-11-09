@@ -5,7 +5,7 @@ const { ccclass, property } = cc._decorator;
  * SRP — только отображение и перезапуск сессии.
  * Ссылки на узлы/компоненты задаются через @property в редакторе.
  */
-@ccclass('ResultScreen')
+@ccclass
 export default class ResultScreen extends cc.Component {
 
     @property(cc.Label)

@@ -4,7 +4,7 @@ const { ccclass, property } = cc._decorator;
  * Счётчик очков (SRP — только отображение текущих очков и цели).
  * Значения выставляются через @property-ссылки в редакторе, без getComponent.
  */
-@ccclass('ScoreCounter')
+@ccclass
 export default class ScoreCounter extends cc.Component {
 
     @property(cc.Label)

@@ -7,7 +7,7 @@ const { ccclass, property } = cc._decorator;
  * Тонкая точка входа на сцене (SRP): только делегирует запуск GameBootstrapper.
  * Ссылки на узлы/компоненты приходят из редактора через @property.
  */
-@ccclass('GameController')
+@ccclass
 export default class GameController extends cc.Component {
 
     /** Контейнер, в который BoardView складывает тайлы. */

@@ -11,7 +11,7 @@ const { ccclass, property } = cc._decorator;
  * Не содержит игровой логики; ссылки на счётчики задаются через @property
  * в редакторе (без getComponent), подписка выполняется через bindGame.
  */
-@ccclass('UiController')
+@ccclass
 export default class UiController extends cc.Component {
 
     @property(ScoreCounter)
