@@ -1,0 +1,74 @@
+import { GameConfigLoader } from '../config/GameConfigLoader';
+import { GameConfig } from '../config/GameConfig';
+import { BoardModel } from './BoardModel';
+import { GameManager } from './GameManager';
+import { BoardView } from '../view/BoardView';
+import UiController from '../view/UiController';
+
+/**
+ * Composition root: единственное место, где создаются и связываются
+ * компоненты core и view (DI вместо статиков и синглтонов).
+ *
+ * 1. Загружает и валидирует конфиг через GameConfigLoader.
+ * 2. Создаёт core: BoardModel, GameManager (конфиг — через конструктор, DIP).
+ * 3. Создаёт view: BoardView (UiController приходит из сцены через GameController).
+ * 4. Связывает слои через события: модель → view, GameManager → UiController.
+ * 5. Связывает ввод: клик инициируется логикой тайла (TileView → TileModel →
+ *    BoardModel) и транслируется в GameManager.
+ */
+export class GameBootstrapper {
+
+    private boardContainer: cc.Node;
+    private ui: UiController;
+
+    constructor(boardContainer: cc.Node, ui: UiController) {
+        this.boardContainer = boardContainer;
+        this.ui = ui;
+    }
+
+    /** Точка запуска: загрузка конфига, затем сборка игры. */
+    public bootstrap(): void {
+        new GameConfigLoader().load((config: GameConfig | null, error: string | null) => {
+            if (!config) {
+                this.ui.showError(error || 'Неизвестная ошибка конфигурации.');
+                return;
+            }
+            this.startGame(config);
+        });
+    }
+
+    // ------------------------------------------------------------------
+    // Сборка игры
+    // ------------------------------------------------------------------
+
+    private startGame(config: GameConfig): void {
+        // Core.
+        const board = new BoardModel(config.board.width, config.board.height, config.board.colorsCount);
+        const game = new GameManager(board, config);
+
+        // View (подписывается на события модели).
+        new BoardView(this.boardContainer, board, config.visual, () => {
+            game.onAnimationsCompleted();
+        });
+        this.ui.bindGame(game, config);
+
+        // Ввод: TileView → TileModel.click() → BoardModel.EVENT_TILE_CLICKED → GameManager.
+        board.on(BoardModel.EVENT_TILE_CLICKED, (tile: { x: number; y: number }) => {
+            game.handleTileClick(tile.x, tile.y);
+        });
+
+        // Запуск сессии.
+        this.generatePlayableBoard(board);
+        game.start();
+    }
+
+    /** Генерирует поле, гарантированно содержащее хотя бы одну доступную группу. */
+    private generatePlayableBoard(board: BoardModel): void {
+        board.generate();
+        let attempts = 1;
+        while (!board.hasAvailableMoves() && attempts < 100) {
+            board.generate();
+            attempts++;
+        }
+    }
+}

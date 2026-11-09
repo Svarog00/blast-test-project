@@ -1,0 +1,24 @@
+{
+    "board": 
+    { 
+        "width": 9, 
+        "height": 9, 
+        "colorsCount": 5 
+    },
+    "goal": 
+    { 
+        "targetScore": 3000, 
+        "movesLimit": 20 
+    },
+    "scoring": 
+    { 
+        "basePerTile": 10, 
+        "chainBonusMultiplier": 1 
+    },
+    "visual": 
+    { 
+        "tileSize": 64, 
+        "animBurnDuration": 0.15, 
+        "animFallDuration": 0.25 
+    }
+}
