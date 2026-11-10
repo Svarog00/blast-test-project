@@ -1,4 +1,5 @@
 import { GameBootstrapper } from './core/GameBootstrapper';
+import { BoardView } from './view/BoardView';
 import UiController from './view/UiController';
 
 const { ccclass, property } = cc._decorator;
@@ -11,8 +12,8 @@ const { ccclass, property } = cc._decorator;
 export default class GameController extends cc.Component {
 
     /** Контейнер, в который BoardView складывает тайлы. */
-    @property(cc.Node)
-    boardContainer: cc.Node = null;
+    @property(BoardView)
+    boardContainer: BoardView = null;
 
     @property(UiController)
     uiController: UiController = null;

@@ -11,23 +11,20 @@ import UiController from '../view/UiController';
  * компоненты core и view (DI вместо статиков и синглтонов).
  *
  * 1. Загружает и валидирует конфиг через GameConfigLoader.
- * 2. Загружает префаб тайла из resources (спавн выполняет BoardView).
- * 3. Создаёт core: BoardModel, GameManager (конфиг — через конструктор, DIP).
- * 4. Создаёт view: BoardView (UiController приходит из сцены через GameController).
- * 5. Связывает слои через события: модель → view, GameManager → UiController.
- * 6. Связывает ввод: клик инициируется логикой тайла (TileView → TileModel →
+ * 2. Создаёт core: BoardModel, GameManager (конфиг — через конструктор, DIP).
+ * 3. Берёт BoardView-компонент из префаба BoardContainer.prefab (сериализованная
+ *    ссылка на Tile.prefab задаётся в редакторе) и связывает его с моделью через init().
+ * 4. Связывает слои через события: модель → view, GameManager → UiController.
+ * 5. Связывает ввод: клик инициируется логикой тайла (TileView → TileModel →
  *    BoardModel) и транслируется в GameManager.
  */
 export class GameBootstrapper {
 
-    /** Путь до префаба тайла внутри бандла resources (без расширения). */
-    private static readonly TILE_PREFAB_PATH = 'prefab/Tile';
-
-    private boardContainer: cc.Node;
+    private boardView: BoardView;
     private ui: UiController;
 
-    constructor(boardContainer: cc.Node, ui: UiController) {
-        this.boardContainer = boardContainer;
+    constructor(boardContainer: BoardView, ui: UiController) {
+        this.boardView = boardContainer;
         this.ui = ui;
     }
 
@@ -43,22 +40,8 @@ export class GameBootstrapper {
                     this.ui.showError(paletteError || 'Неизвестная ошибка палитры тайлов.');
                     return;
                 }
-                this.loadTilePrefab(config, palette);
+                this.startGame(config, palette);
             });
-        });
-    }
-
-    /** Загрузка префаба тайла; без него BoardView не сможет спавнить визуалы. */
-    private loadTilePrefab(config: GameConfig, palette: TilePalette): void {
-        cc.resources.load(GameBootstrapper.TILE_PREFAB_PATH, cc.Prefab, (err: Error | null, prefab: cc.Prefab) => {
-            if (err || !prefab) {
-                this.ui.showError(
-                    `Не удалось загрузить префаб тайла "${GameBootstrapper.TILE_PREFAB_PATH}": ` +
-                    `${err ? err.message : 'ресурс не найден'}`
-                );
-                return;
-            }
-            this.startGame(config, palette, prefab);
         });
     }
 
@@ -66,13 +49,21 @@ export class GameBootstrapper {
     // Сборка игры
     // ------------------------------------------------------------------
 
-    private startGame(config: GameConfig, palette: TilePalette, tilePrefab: cc.Prefab): void {
+    private startGame(config: GameConfig, palette: TilePalette): void {
+        if (!this.boardView.tilePrefab) {
+            this.ui.showError(
+                'У компонента BoardView не задан tilePrefab — укажите ссылку на ' +
+                'prefab/Tile в инспекторе префаба BoardContainer.prefab.'
+            );
+            return;
+        }
+
         // Core.
         const board = new BoardModel(config.board.width, config.board.height, config.board.colorsCount);
         const game = new GameManager(board, config);
 
         // View (подписывается на события модели; тайлы спавнит из префаба).
-        new BoardView(this.boardContainer, board, config.visual, palette, tilePrefab, () => {
+        this.boardView.init(board, config.visual, palette, () => {
             game.onAnimationsCompleted();
         });
         this.ui.bindGame(game, config);

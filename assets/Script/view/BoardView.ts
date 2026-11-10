@@ -11,26 +11,37 @@ import { VisualConfig } from '../config/GameConfig';
 import { TilePalette } from '../config/TilePalette';
 import { TileView } from './TileView';
 
+const { ccclass, property } = cc._decorator;
+
 /**
- * Визуал игрового поля: создание тайлов, анимации сгорания, падения и появления.
+ * Визуал игрового поля: компонент на узле «Board» префаба BoardContainer.prefab.
  * SRP: только отображение состояния BoardModel. Логики игры не содержит —
  * подписывается на события модели и по завершении анимаций сообщает об этом
  * через колбэк (связывание выполняет GameBootstrapper).
  *
- * Тайлы спавнятся через Instantiate экземпляра префаба (tilePrefab приходит
- * из GameBootstrapper), компонент TileView лежит на корне префаба.
+ * Префаб тайла задаётся сериализованно через @property (заполняется в
+ * редакторе в инспекторе префаба). Рантайм-данные (модель, палитра,
+ * визуальные параметры из конфига) сериализовать нельзя — они создаются
+ * в рантайме и передаются через init() из GameBootstrapper.
  */
-export class BoardView {
+@ccclass
+export class BoardView extends cc.Component {
 
     /** Отношение визуального размера тайла к шагу сетки (зазор между тайлами). */
     private static readonly TILE_FILL: number = 0.9;
 
-    private boardNode: cc.Node;
-    private tileSize: number;
-    private cols: number;
-    private rows: number;
-    private burnDuration: number;
-    private fallDuration: number;
+    /** Префаб тайла — ссылка задаётся сериализованно в префабе. */
+    @property(cc.Prefab)
+    public readonly tilePrefab: cc.Prefab = null;
+    
+    @property(cc.Node)
+    private rootNode : cc.Node = null;
+
+    private tileSize: number = 0;
+    private cols: number = 0;
+    private rows: number = 0;
+    private burnDuration: number = 0;
+    private fallDuration: number = 0;
 
     /** Карта «id тайла → визуал». */
     private views: Map<number, TileView> = new Map<number, TileView>();
@@ -39,33 +50,45 @@ export class BoardView {
     private pendingMoves: TileMove[] = [];
     private pendingSpawns: TileSpawn[] = [];
 
-    private palette: TilePalette;
-    private tilePrefab: cc.Prefab;
-    private onAnimationsCompleted: () => void;
+    private palette: TilePalette = null;
+    private onAnimationsCompleted: () => void = null;
+    private board: BoardModel = null;
 
-    constructor(
-        parent: cc.Node,
+    // Обёртки-подписки: хранятся для корректной отписки в onDestroy.
+    private readonly handleTilesSpawned = (payload: TilesSpawnedPayload) => this.onTilesSpawned(payload);
+    private readonly handleTilesRemoved = (payload: TilesRemovedPayload) => this.onTilesRemoved(payload);
+    private readonly handleTilesMoved = (payload: TilesMovedPayload) => this.onTilesMoved(payload);
+
+    /**
+     * Привязка модели и рантайм-зависимостей; выполняется GameBootstrapper.
+     * Узел компонента является контейнером тайлов.
+     */
+    public init(
         board: BoardModel,
         visual: VisualConfig,
         palette: TilePalette,
-        tilePrefab: cc.Prefab,
         onAnimationsCompleted: () => void
-    ) {
+    ): void {
+        this.board = board;
         this.tileSize = visual.tileSize;
         this.cols = board.width;
         this.rows = board.height;
         this.burnDuration = visual.animBurnDuration;
         this.fallDuration = visual.animFallDuration;
         this.palette = palette;
-        this.tilePrefab = tilePrefab;
         this.onAnimationsCompleted = onAnimationsCompleted;
 
-        this.boardNode = new cc.Node('Board');
-        this.boardNode.setParent(parent);
+        board.on(BoardModel.EVENT_TILES_SPAWNED, this.handleTilesSpawned);
+        board.on(BoardModel.EVENT_TILES_REMOVED, this.handleTilesRemoved);
+        board.on(BoardModel.EVENT_TILES_MOVED, this.handleTilesMoved);
+    }
 
-        board.on(BoardModel.EVENT_TILES_SPAWNED, (payload: TilesSpawnedPayload) => this.onTilesSpawned(payload));
-        board.on(BoardModel.EVENT_TILES_REMOVED, (payload: TilesRemovedPayload) => this.onTilesRemoved(payload));
-        board.on(BoardModel.EVENT_TILES_MOVED, (payload: TilesMovedPayload) => this.onTilesMoved(payload));
+    protected onDestroy(): void {
+        if (this.board) {
+            this.board.off(BoardModel.EVENT_TILES_SPAWNED, this.handleTilesSpawned);
+            this.board.off(BoardModel.EVENT_TILES_REMOVED, this.handleTilesRemoved);
+            this.board.off(BoardModel.EVENT_TILES_MOVED, this.handleTilesMoved);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -103,7 +126,7 @@ export class BoardView {
         }
 
         // После сгорания запускаем накопленные падения.
-        cc.tween(this.boardNode)
+        cc.tween(this.rootNode)
             .delay(this.burnDuration)
             .call(() => {
                 this.playFalls();
@@ -141,7 +164,7 @@ export class BoardView {
         this.pendingMoves = [];
         this.pendingSpawns = [];
 
-        cc.tween(this.boardNode)
+        cc.tween(this.rootNode)
             .delay(this.fallDuration)
             .call(() => {
                 this.onAnimationsCompleted();
@@ -157,7 +180,7 @@ export class BoardView {
         // Спавн через создание экземпляра префаба: узел и сериализованные
         // свойства TileView (sprite и т.п.) приходят из префаба.
         const node = cc.instantiate(this.tilePrefab);
-        node.setParent(this.boardNode);
+        node.setParent(this.rootNode);
         node.setContentSize(this.tileSize * BoardView.TILE_FILL, this.tileSize * BoardView.TILE_FILL);
 
         const view = node.getComponent(TileView);

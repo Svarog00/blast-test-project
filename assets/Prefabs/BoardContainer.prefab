@@ -95,6 +95,9 @@
       },
       {
         "__id__": 4
+      },
+      {
+        "__id__": 9
       }
     ],
     "_prefab": {
@@ -286,5 +289,18 @@
     },
     "fileId": "",
     "sync": false
+  },
+  {
+    "__type__": "1fd2dlG5v1GapSYDnLEJ9aq",
+    "_name": "",
+    "_objFlags": 0,
+    "node": {
+      "__id__": 2
+    },
+    "_enabled": true,
+    "tilePrefab": {
+      "__uuid__": "fbf9ed57-7cfc-4f3e-9a02-83fbbe0bef67"
+    },
+    "_id": ""
   }
 ]
