@@ -42,6 +42,8 @@ export default class UiController extends cc.Component {
 
         this.scoreCounter.setScore(game.score);
         this.movesCounter.setMoves(game.movesLeft);
+
+        this.resultScreen.hide();
     }
 
     /** Экран ошибки конфигурации — игра не стартует. */

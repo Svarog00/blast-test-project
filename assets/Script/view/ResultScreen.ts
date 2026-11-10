@@ -11,12 +11,12 @@ export default class ResultScreen extends cc.Component {
     @property(cc.Label)
     label: cc.Label = null;
 
-    @property(cc.Node)
-    restartButton: cc.Node = null;
+    @property(cc.Button)
+    restartButton: cc.Button = null;
 
     protected start(): void {
         if (this.restartButton) {
-            this.restartButton.on(cc.Node.EventType.TOUCH_END, this.onRestartClicked, this);
+            this.restartButton.node.on(cc.Node.EventType.TOUCH_END, this.onRestartClicked, this);
         }
     }
 
