@@ -1,0 +1,9 @@
+{
+    "tiles": [
+        { "colorIndex": 0, "sprite": "Texture/Tiles/block_blue", "color": "#4A90E2" },
+        { "colorIndex": 1, "sprite": "Texture/Tiles/block_green", "color": "#50C878" },
+        { "colorIndex": 2, "sprite": "Texture/Tiles/block_red", "color": "#E74C3C" },
+        { "colorIndex": 3, "sprite": "Texture/Tiles/block_yellow", "color": "#F1C40F" },
+        { "colorIndex": 4, "sprite": "Texture/Tiles/block_purpure", "color": "#9B59B6" }
+    ]
+}

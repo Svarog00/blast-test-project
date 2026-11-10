@@ -7,6 +7,7 @@ import {
     TilesSpawnedPayload
 } from '../core/BoardModel';
 import { VisualConfig } from '../config/GameConfig';
+import { TilePalette } from '../config/TilePalette';
 import { TileView } from './TileView';
 
 /**
@@ -34,14 +35,16 @@ export class BoardView {
     private pendingMoves: TileMove[] = [];
     private pendingSpawns: TileSpawn[] = [];
 
+    private palette: TilePalette;
     private onAnimationsCompleted: () => void;
 
-    constructor(parent: cc.Node, board: BoardModel, visual: VisualConfig, onAnimationsCompleted: () => void) {
+    constructor(parent: cc.Node, board: BoardModel, visual: VisualConfig, palette: TilePalette, onAnimationsCompleted: () => void) {
         this.tileSize = visual.tileSize;
         this.cols = board.width;
         this.rows = board.height;
         this.burnDuration = visual.animBurnDuration;
         this.fallDuration = visual.animFallDuration;
+        this.palette = palette;
         this.onAnimationsCompleted = onAnimationsCompleted;
 
         this.boardNode = new cc.Node('Board');
@@ -138,7 +141,7 @@ export class BoardView {
     // ------------------------------------------------------------------
 
     private createView(tile: import('../core/TileModel').TileModel): TileView {
-        const view = new TileView(this.boardNode, this.tileSize * BoardView.TILE_FILL, tile);
+        const view = new TileView(this.boardNode, this.tileSize * BoardView.TILE_FILL, tile, this.palette);
         this.views.set(tile.id, view);
         return view;
     }

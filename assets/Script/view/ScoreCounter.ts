@@ -25,7 +25,7 @@ export default class ScoreCounter extends cc.Component {
 
     private refresh(): void {
         if (this.label) {
-            this.label.string = 'Score: ' + this.currentScore + ' / ' + this.targetScore;
+            this.label.string = 'Score: \n' + this.currentScore + ' / ' + this.targetScore;
         }
     }
 }

@@ -12,7 +12,7 @@ export default class MovesCounter extends cc.Component {
 
     public setMoves(moves: number): void {
         if (this.label) {
-            this.label.string = 'Moves: ' + moves;
+            this.label.string = moves.toString();
         }
     }
 }

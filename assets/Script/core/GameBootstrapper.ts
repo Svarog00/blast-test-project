@@ -1,5 +1,6 @@
 import { GameConfigLoader } from '../config/GameConfigLoader';
 import { GameConfig } from '../config/GameConfig';
+import { TilePalette, TilePaletteLoader } from '../config/TilePalette';
 import { BoardModel } from './BoardModel';
 import { GameManager } from './GameManager';
 import { BoardView } from '../view/BoardView';
@@ -26,14 +27,20 @@ export class GameBootstrapper {
         this.ui = ui;
     }
 
-    /** Точка запуска: загрузка конфига, затем сборка игры. */
+    /** Точка запуска: загрузка конфига и палитры тайлов, затем сборка игры. */
     public bootstrap(): void {
         new GameConfigLoader().load((config: GameConfig | null, error: string | null) => {
             if (!config) {
                 this.ui.showError(error || 'Неизвестная ошибка конфигурации.');
                 return;
             }
-            this.startGame(config);
+            new TilePaletteLoader().load(config.board.colorsCount, (palette: TilePalette | null, paletteError: string | null) => {
+                if (!palette) {
+                    this.ui.showError(paletteError || 'Неизвестная ошибка палитры тайлов.');
+                    return;
+                }
+                this.startGame(config, palette);
+            });
         });
     }
 
@@ -41,13 +48,13 @@ export class GameBootstrapper {
     // Сборка игры
     // ------------------------------------------------------------------
 
-    private startGame(config: GameConfig): void {
+    private startGame(config: GameConfig, palette: TilePalette): void {
         // Core.
         const board = new BoardModel(config.board.width, config.board.height, config.board.colorsCount);
         const game = new GameManager(board, config);
 
         // View (подписывается на события модели).
-        new BoardView(this.boardContainer, board, config.visual, () => {
+        new BoardView(this.boardContainer, board, config.visual, palette, () => {
             game.onAnimationsCompleted();
         });
         this.ui.bindGame(game, config);
