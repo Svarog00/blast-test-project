@@ -589,8 +589,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 100,
-      "height": 40
+      "width": 300,
+      "height": 125
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -602,7 +602,7 @@
       "ctor": "Float64Array",
       "array": [
         0,
-        -53.93599999999998,
+        -53.93599999999992,
         0,
         0,
         0,
@@ -660,8 +660,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 100,
-      "height": 40
+      "width": 300,
+      "height": 200
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -717,20 +717,20 @@
     "_opacity": 255,
     "_color": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 255,
+      "g": 255,
+      "b": 255,
       "a": 255
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 100,
+      "width": 250,
       "height": 40
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
       "x": 0.5,
-      "y": 0.5
+      "y": 0.25
     },
     "_trs": {
       "__type__": "TypedArray",
@@ -778,7 +778,7 @@
     "_dstBlendFactor": 771,
     "_string": "Restart",
     "_N$string": "Restart",
-    "_fontSize": 20,
+    "_fontSize": 40,
     "_lineHeight": 40,
     "_enableWrapText": false,
     "_N$file": null,
@@ -821,7 +821,7 @@
     "_srcBlendFactor": 770,
     "_dstBlendFactor": 771,
     "_spriteFrame": {
-      "__uuid__": "f0048c10-f03e-4c97-b9d3-3506e1d58952"
+      "__uuid__": "fc86c44a-26a7-4f8c-9f44-75860e4aa1a0"
     },
     "_type": 1,
     "_sizeMode": 0,
@@ -850,8 +850,8 @@
     "_alignFlags": 45,
     "_left": 0,
     "_right": 0,
-    "_top": 0,
-    "_bottom": 0,
+    "_top": -37.5,
+    "_bottom": -37.5,
     "_verticalCenter": 0,
     "_horizontalCenter": 0,
     "_isAbsLeft": true,
@@ -935,7 +935,7 @@
       "a": 200
     },
     "_N$normalSprite": {
-      "__uuid__": "f0048c10-f03e-4c97-b9d3-3506e1d58952"
+      "__uuid__": "fc86c44a-26a7-4f8c-9f44-75860e4aa1a0"
     },
     "_N$pressedSprite": {
       "__uuid__": "e9ec654c-97a2-4787-9325-e6a10375219a"
@@ -973,7 +973,7 @@
     "_left": 0,
     "_right": 0,
     "_top": 0,
-    "_bottom": 306.064,
+    "_bottom": 263.5640000000001,
     "_verticalCenter": 0,
     "_horizontalCenter": 0,
     "_isAbsLeft": true,
@@ -1027,8 +1027,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 97.87,
-      "height": 50.4
+      "width": 183.51,
+      "height": 75.6
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1081,8 +1081,8 @@
     "_dstBlendFactor": 771,
     "_string": "Label",
     "_N$string": "Label",
-    "_fontSize": 40,
-    "_lineHeight": 40,
+    "_fontSize": 75,
+    "_lineHeight": 60,
     "_enableWrapText": true,
     "_N$file": null,
     "_isSystemFontUsed": true,
@@ -1112,7 +1112,7 @@
     "_alignFlags": 1,
     "_left": 0,
     "_right": 0,
-    "_top": 220.21300000000002,
+    "_top": 207.61300000000003,
     "_bottom": 0,
     "_verticalCenter": 0,
     "_horizontalCenter": 0,
