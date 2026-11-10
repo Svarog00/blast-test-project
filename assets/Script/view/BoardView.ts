@@ -6,6 +6,7 @@ import {
     TilesMovedPayload,
     TilesSpawnedPayload
 } from '../core/BoardModel';
+import { TileModel } from '../core/TileModel';
 import { VisualConfig } from '../config/GameConfig';
 import { TilePalette } from '../config/TilePalette';
 import { TileView } from './TileView';
@@ -15,6 +16,9 @@ import { TileView } from './TileView';
  * SRP: только отображение состояния BoardModel. Логики игры не содержит —
  * подписывается на события модели и по завершении анимаций сообщает об этом
  * через колбэк (связывание выполняет GameBootstrapper).
+ *
+ * Тайлы спавнятся через Instantiate экземпляра префаба (tilePrefab приходит
+ * из GameBootstrapper), компонент TileView лежит на корне префаба.
  */
 export class BoardView {
 
@@ -36,15 +40,24 @@ export class BoardView {
     private pendingSpawns: TileSpawn[] = [];
 
     private palette: TilePalette;
+    private tilePrefab: cc.Prefab;
     private onAnimationsCompleted: () => void;
 
-    constructor(parent: cc.Node, board: BoardModel, visual: VisualConfig, palette: TilePalette, onAnimationsCompleted: () => void) {
+    constructor(
+        parent: cc.Node,
+        board: BoardModel,
+        visual: VisualConfig,
+        palette: TilePalette,
+        tilePrefab: cc.Prefab,
+        onAnimationsCompleted: () => void
+    ) {
         this.tileSize = visual.tileSize;
         this.cols = board.width;
         this.rows = board.height;
         this.burnDuration = visual.animBurnDuration;
         this.fallDuration = visual.animFallDuration;
         this.palette = palette;
+        this.tilePrefab = tilePrefab;
         this.onAnimationsCompleted = onAnimationsCompleted;
 
         this.boardNode = new cc.Node('Board');
@@ -140,8 +153,15 @@ export class BoardView {
     // Вспомогательные методы
     // ------------------------------------------------------------------
 
-    private createView(tile: import('../core/TileModel').TileModel): TileView {
-        const view = new TileView(this.boardNode, this.tileSize * BoardView.TILE_FILL, tile, this.palette);
+    private createView(tile: TileModel): TileView {
+        // Спавн через создание экземпляра префаба: узел и сериализованные
+        // свойства TileView (sprite и т.п.) приходят из префаба.
+        const node = cc.instantiate(this.tilePrefab);
+        node.setParent(this.boardNode);
+        node.setContentSize(this.tileSize * BoardView.TILE_FILL, this.tileSize * BoardView.TILE_FILL);
+
+        const view = node.getComponent(TileView);
+        view.init(tile, this.palette);
         this.views.set(tile.id, view);
         return view;
     }

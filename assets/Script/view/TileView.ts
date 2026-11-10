@@ -1,12 +1,19 @@
 import { TileModel } from '../core/TileModel';
 import { TilePalette } from '../config/TilePalette';
 
+const { ccclass, property } = cc._decorator;
+
 /**
- * Визуал одного тайла: спрайт, выбранный из палитры по индексу цвета модели.
+ * Визуал одного тайла: компонент на узле из префаба Tile.prefab.
  *
  * SRP: перехват и первичная обработка клика — ответственность TileView
  * (метод handleClick). Никакой игровой логики: клик передаётся логике
  * самого тайла (TileModel.click()), дальше событие уходит в модель поля.
+ *
+ * Зависимости берутся из сериализованных свойств (заполняются в префабе
+ * в редакторе): cc.Sprite берётся из @property, а не через getComponent.
+ * Модель и палитра приходят извне через init() — их сериализовать нельзя
+ * (они создаются в рантайме).
  *
  * Спрайт приходит из TilePalette (data-ассет tile-palette.json — аналог
  * ScriptableObject). Если спрайт для цвета не найден, используется
@@ -33,57 +40,53 @@ export function getWhiteSpriteFrame(): cc.SpriteFrame {
     return sharedWhiteFrame;
 }
 
-export class TileView {
+@ccclass
+export class TileView extends cc.Component {
 
-    public readonly node: cc.Node;
-    private tile: TileModel;
-    private palette: TilePalette;
+    /** Спрайт тайла — ссылка задаётся сериализованно в префабе (без getComponent). */
+    @property(cc.Sprite)
+    private sprite: cc.Sprite = null;
+
+    private tile: TileModel | null = null;
+    private palette: TilePalette | null = null;
 
     /**
-     * @param parent родительский узел (контейнер поля)
-     * @param size размер тайла в пикселях
-     * @param tile модель тайла
-     * @param palette палитра «цвет → спрайт» из data-ассета
+     * Привязка модели и палитры; выполняется BoardView сразу после
+     * Instantiate экземпляра префаба.
      */
-    constructor(parent: cc.Node, size: number, tile: TileModel, palette: TilePalette) {
+    public init(tile: TileModel, palette: TilePalette): void {
         this.tile = tile;
         this.palette = palette;
 
-        this.node = new cc.Node('Tile_' + tile.id);
-        this.node.setParent(parent);
-        this.node.setContentSize(size, size);
-
-        const sprite = this.node.addComponent(cc.Sprite);
-        sprite.sizeMode = cc.Sprite.SizeMode.CUSTOM;
-        sprite.spriteFrame = getWhiteSpriteFrame();
-
         this.setColorIndex(tile.colorIndex);
 
+        this.node.off(cc.Node.EventType.TOUCH_END, this.handleClick, this);
         this.node.on(cc.Node.EventType.TOUCH_END, this.handleClick, this);
     }
 
     /** Выбор спрайта, соответствующего цвету тайла; при отсутствии — тонировка. */
     public setColorIndex(colorIndex: number): void {
-        const sprite = this.node.getComponent(cc.Sprite);
-        if (!sprite) {
+        if (!this.sprite) {
             return;
         }
 
-        const frame = this.palette.getFrame(colorIndex);
+        const frame = this.palette ? this.palette.getFrame(colorIndex) : null;
         if (frame) {
-            sprite.spriteFrame = frame;
+            this.sprite.spriteFrame = frame;
             this.node.color = cc.Color.WHITE;
             return;
         }
 
         // Резерв: белая заглушка, тонированная цветом из палитры.
-        sprite.spriteFrame = getWhiteSpriteFrame();
-        const fallback = this.palette.getFallbackColor(colorIndex);
+        this.sprite.spriteFrame = getWhiteSpriteFrame();
+        const fallback = this.palette ? this.palette.getFallbackColor(colorIndex) : null;
         this.node.color = fallback || cc.Color.WHITE;
     }
 
     /** Обработка клика: инициирует событие в логике тайла. */
     private handleClick(): void {
-        this.tile.click();
+        if (this.tile) {
+            this.tile.click();
+        }
     }
 }

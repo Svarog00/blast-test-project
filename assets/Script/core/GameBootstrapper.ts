@@ -11,13 +11,17 @@ import UiController from '../view/UiController';
  * компоненты core и view (DI вместо статиков и синглтонов).
  *
  * 1. Загружает и валидирует конфиг через GameConfigLoader.
- * 2. Создаёт core: BoardModel, GameManager (конфиг — через конструктор, DIP).
- * 3. Создаёт view: BoardView (UiController приходит из сцены через GameController).
- * 4. Связывает слои через события: модель → view, GameManager → UiController.
- * 5. Связывает ввод: клик инициируется логикой тайла (TileView → TileModel →
+ * 2. Загружает префаб тайла из resources (спавн выполняет BoardView).
+ * 3. Создаёт core: BoardModel, GameManager (конфиг — через конструктор, DIP).
+ * 4. Создаёт view: BoardView (UiController приходит из сцены через GameController).
+ * 5. Связывает слои через события: модель → view, GameManager → UiController.
+ * 6. Связывает ввод: клик инициируется логикой тайла (TileView → TileModel →
  *    BoardModel) и транслируется в GameManager.
  */
 export class GameBootstrapper {
+
+    /** Путь до префаба тайла внутри бандла resources (без расширения). */
+    private static readonly TILE_PREFAB_PATH = 'prefab/Tile';
 
     private boardContainer: cc.Node;
     private ui: UiController;
@@ -39,8 +43,22 @@ export class GameBootstrapper {
                     this.ui.showError(paletteError || 'Неизвестная ошибка палитры тайлов.');
                     return;
                 }
-                this.startGame(config, palette);
+                this.loadTilePrefab(config, palette);
             });
+        });
+    }
+
+    /** Загрузка префаба тайла; без него BoardView не сможет спавнить визуалы. */
+    private loadTilePrefab(config: GameConfig, palette: TilePalette): void {
+        cc.resources.load(GameBootstrapper.TILE_PREFAB_PATH, cc.Prefab, (err: Error | null, prefab: cc.Prefab) => {
+            if (err || !prefab) {
+                this.ui.showError(
+                    `Не удалось загрузить префаб тайла "${GameBootstrapper.TILE_PREFAB_PATH}": ` +
+                    `${err ? err.message : 'ресурс не найден'}`
+                );
+                return;
+            }
+            this.startGame(config, palette, prefab);
         });
     }
 
@@ -48,13 +66,13 @@ export class GameBootstrapper {
     // Сборка игры
     // ------------------------------------------------------------------
 
-    private startGame(config: GameConfig, palette: TilePalette): void {
+    private startGame(config: GameConfig, palette: TilePalette, tilePrefab: cc.Prefab): void {
         // Core.
         const board = new BoardModel(config.board.width, config.board.height, config.board.colorsCount);
         const game = new GameManager(board, config);
 
-        // View (подписывается на события модели).
-        new BoardView(this.boardContainer, board, config.visual, palette, () => {
+        // View (подписывается на события модели; тайлы спавнит из префаба).
+        new BoardView(this.boardContainer, board, config.visual, palette, tilePrefab, () => {
             game.onAnimationsCompleted();
         });
         this.ui.bindGame(game, config);
