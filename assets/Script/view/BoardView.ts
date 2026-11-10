@@ -4,7 +4,8 @@ import {
     TileSpawn,
     TilesRemovedPayload,
     TilesMovedPayload,
-    TilesSpawnedPayload
+    TilesSpawnedPayload,
+    SuperTileCreatedPayload
 } from '../core/BoardModel';
 import { TileModel } from '../core/TileModel';
 import { VisualConfig } from '../config/GameConfig';
@@ -49,6 +50,8 @@ export class BoardView extends cc.Component {
     /** Накопленные изменения поля, ожидающие окончания анимации сгорания. */
     private pendingMoves: TileMove[] = [];
     private pendingSpawns: TileSpawn[] = [];
+    /** Супер-тайлы, ожидающие появления после анимации сгорания. */
+    private pendingSuperSpawns: SuperTileCreatedPayload[] = [];
 
     private palette: TilePalette = null;
     private onAnimationsCompleted: () => void = null;
@@ -58,6 +61,7 @@ export class BoardView extends cc.Component {
     private readonly handleTilesSpawned = (payload: TilesSpawnedPayload) => this.onTilesSpawned(payload);
     private readonly handleTilesRemoved = (payload: TilesRemovedPayload) => this.onTilesRemoved(payload);
     private readonly handleTilesMoved = (payload: TilesMovedPayload) => this.onTilesMoved(payload);
+    private readonly handleSuperTileCreated = (payload: SuperTileCreatedPayload) => this.onSuperTileCreated(payload);
 
     /**
      * Привязка модели и рантайм-зависимостей; выполняется GameBootstrapper.
@@ -81,6 +85,7 @@ export class BoardView extends cc.Component {
         board.on(BoardModel.EVENT_TILES_SPAWNED, this.handleTilesSpawned);
         board.on(BoardModel.EVENT_TILES_REMOVED, this.handleTilesRemoved);
         board.on(BoardModel.EVENT_TILES_MOVED, this.handleTilesMoved);
+        board.on(BoardModel.EVENT_SUPER_TILE_CREATED, this.handleSuperTileCreated);
     }
 
     protected onDestroy(): void {
@@ -88,6 +93,7 @@ export class BoardView extends cc.Component {
             this.board.off(BoardModel.EVENT_TILES_SPAWNED, this.handleTilesSpawned);
             this.board.off(BoardModel.EVENT_TILES_REMOVED, this.handleTilesRemoved);
             this.board.off(BoardModel.EVENT_TILES_MOVED, this.handleTilesMoved);
+            this.board.off(BoardModel.EVENT_SUPER_TILE_CREATED, this.handleSuperTileCreated);
         }
     }
 
@@ -117,6 +123,10 @@ export class BoardView extends cc.Component {
             }
             this.views.delete(tile.id);
 
+            // Останавливаем прочие твины узла (например, пульс супер-тайла),
+            // чтобы они не конфликтовали с анимацией сгорания.
+            cc.Tween.stopAllByTarget(view.node);
+
             cc.tween(view.node)
                 .to(this.burnDuration, { scale: 0, opacity: 0 })
                 .call(() => {
@@ -138,11 +148,22 @@ export class BoardView extends cc.Component {
         this.pendingMoves = this.pendingMoves.concat(payload.moves);
     }
 
+    private onSuperTileCreated(payload: SuperTileCreatedPayload): void {
+        this.pendingSuperSpawns.push(payload);
+    }
+
     // ------------------------------------------------------------------
     // Анимации
     // ------------------------------------------------------------------
 
     private playFalls(): void {
+        // Супер-тайлы появляются на месте клика (после анимации сгорания группы);
+        // если гравитация сдвинула их вниз — дальше подхватит цикл перемещений.
+        for (const superSpawn of this.pendingSuperSpawns) {
+            const view = this.createView(superSpawn.tile);
+            view.node.setPosition(this.cellToPos(superSpawn.x, superSpawn.y));
+        }
+
         for (const move of this.pendingMoves) {
             const view = this.views.get(move.tile.id);
             if (!view) {
@@ -163,6 +184,7 @@ export class BoardView extends cc.Component {
 
         this.pendingMoves = [];
         this.pendingSpawns = [];
+        this.pendingSuperSpawns = [];
 
         cc.tween(this.rootNode)
             .delay(this.fallDuration)
@@ -186,7 +208,22 @@ export class BoardView extends cc.Component {
         const view = node.getComponent(TileView);
         view.init(tile, this.palette);
         this.views.set(tile.id, view);
+
+        if (tile.isSuper) {
+            this.startSuperPulse(view);
+        }
         return view;
+    }
+
+    /** Пульсация супер-тайла — визуальное выделение; останавливается при сгорании. */
+    private startSuperPulse(view: TileView): void {
+        cc.tween(view.node)
+            .repeatForever(
+                cc.tween()
+                    .to(0.45, { scale: 1.12 })
+                    .to(0.45, { scale: 1.0 })
+            )
+            .start();
     }
 
     private clearViews(): void {

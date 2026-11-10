@@ -3,9 +3,10 @@
  * ассете (resources/config/tile-palette.json) и загружаются во время игры.
  *
  * TilePalette — типизированная обёртка над данными ассета: даёт view-слою
- * доступ к спрайту по индексу цвета, не раскрывая способ хранения.
- * TilePaletteLoader — единственное место, зависящее от способа доставки
- * (cc.resources / cc.JsonAsset / cc.SpriteFrame), по образцу GameConfigLoader.
+ * доступ к спрайту по индексу цвета или по виду спец-тайла (kind), не
+ * раскрывая способ хранения. TilePaletteLoader — единственное место,
+ * зависящее от способа доставки (cc.resources / cc.JsonAsset / cc.SpriteFrame),
+ * по образцу GameConfigLoader.
  */
 
 /** Запись палитры: индекс цвета, путь до спрайта и резервный цвет тонировки. */
@@ -17,18 +18,46 @@ export interface TileSpriteEntry {
     color: string;
 }
 
+/**
+ * Запись спец-тайла: вид (kind), путь спрайта и резервный цвет тонировки.
+ * Список open-ended — новые виды (бомба, ракеты и т.п.) добавляются данными,
+ * без изменения кода палитры (Open/Closed).
+ */
+export interface SpecialTileSpriteEntry {
+    /** Вид спец-тайла; см. константы SPECIAL_* в TilePalette. */
+    kind: string;
+    /** Путь спрайта внутри бандла resources (без расширения). */
+    sprite: string;
+    /** HEX-цвет резервной тонировки, если спрайт не загрузился. */
+    color: string;
+}
+
 /** «Сырые» данные ассета tile-palette.json. */
 export interface TilePaletteData {
     tiles: TileSpriteEntry[];
+    /** Опциональный список спец-тайлов, ключ — вид (kind). */
+    specialTiles?: SpecialTileSpriteEntry[];
 }
 
-/** Готовая к использованию палитра: colorIndex → SpriteFrame. */
+/** Готовая к использованию палитра: colorIndex → SpriteFrame, kind → SpriteFrame. */
 export class TilePalette {
+
+    /** Вид спец-тайла «супер-тайл» (бомба). */
+    public static readonly SPECIAL_SUPER = 'super';
 
     private frames: Map<number, cc.SpriteFrame> = new Map<number, cc.SpriteFrame>();
     private colors: Map<number, cc.Color> = new Map<number, cc.Color>();
 
-    public constructor(entries: TileSpriteEntry[], frames: Map<number, cc.SpriteFrame>) {
+    /** Спец-тайлы: kind → SpriteFrame и kind → резервный цвет. */
+    private specialFrames: Map<string, cc.SpriteFrame> = new Map<string, cc.SpriteFrame>();
+    private specialColors: Map<string, cc.Color> = new Map<string, cc.Color>();
+
+    public constructor(
+        entries: TileSpriteEntry[],
+        frames: Map<number, cc.SpriteFrame>,
+        specialEntries: SpecialTileSpriteEntry[] = [],
+        specialFrames: Map<string, cc.SpriteFrame> = new Map<string, cc.SpriteFrame>()
+    ) {
         for (const entry of entries) {
             const frame = frames.get(entry.colorIndex) || null;
             if (frame) {
@@ -36,11 +65,28 @@ export class TilePalette {
             }
             this.colors.set(entry.colorIndex, new cc.Color().fromHEX(entry.color));
         }
+        for (const entry of specialEntries) {
+            const frame = specialFrames.get(entry.kind) || null;
+            if (frame) {
+                this.specialFrames.set(entry.kind, frame);
+            }
+            this.specialColors.set(entry.kind, new cc.Color().fromHEX(entry.color));
+        }
     }
 
     /** Спрайт, соответствующий цвету тайла (или null, если не найден). */
     public getFrame(colorIndex: number): cc.SpriteFrame | null {
         return this.frames.get(colorIndex) || null;
+    }
+
+    /** Спрайт спец-тайла по виду (или null, если не задан / не загрузился). */
+    public getSpecialFrame(kind: string): cc.SpriteFrame | null {
+        return this.specialFrames.get(kind) || null;
+    }
+
+    /** Резервный цвет тонировки спец-тайла по виду (используется, когда спрайта нет). */
+    public getSpecialFallbackColor(kind: string): cc.Color | null {
+        return this.specialColors.get(kind) || null;
     }
 
     /** Резервный цвет тонировки для colorIndex (используется, когда спрайта нет). */
@@ -71,8 +117,8 @@ export class TilePaletteLoader {
                 return;
             }
             try {
-                const entries = this.validate(asset.json, requiredColors);
-                this.loadFrames(entries, onComplete);
+                const validated = this.validate(asset.json, requiredColors);
+                this.loadFrames(validated.entries, validated.specialEntries, onComplete);
             } catch (e) {
                 onComplete(null, (e as Error).message);
             }
@@ -84,7 +130,7 @@ export class TilePaletteLoader {
     // ------------------------------------------------------------------
 
     /** Чистая функция-валидатор: проверяет структуру и покрытие requiredColors. */
-    private validate(raw: unknown, requiredColors: number): TileSpriteEntry[] {
+    private validate(raw: unknown, requiredColors: number): { entries: TileSpriteEntry[]; specialEntries: SpecialTileSpriteEntry[] } {
         if (raw === null || typeof raw !== 'object') {
             throw new Error('TilePalette: ассет должен быть JSON-объектом.');
         }
@@ -125,21 +171,67 @@ export class TilePaletteLoader {
                 throw new Error(`TilePalette: палитра не покрывает colorIndex=${i} (в конфиге board.colorsCount=${requiredColors}).`);
             }
         }
-        return entries;
+
+        // Секция спец-тайлов опциональна; если задана — проверяем каждую запись.
+        const specialEntries: SpecialTileSpriteEntry[] = [];
+        const rawSpecial = data['specialTiles'];
+        if (rawSpecial !== undefined && rawSpecial !== null) {
+            if (!Array.isArray(rawSpecial)) {
+                throw new Error('TilePalette: поле "specialTiles" должно быть массивом.');
+            }
+            const seenKinds: Set<string> = new Set<string>();
+            for (const item of rawSpecial) {
+                if (item === null || typeof item !== 'object') {
+                    throw new Error('TilePalette: элемент массива "specialTiles" должен быть объектом.');
+                }
+                const record = item as Record<string, unknown>;
+                const kind = record['kind'];
+                const sprite = record['sprite'];
+                const color = record['color'];
+                if (typeof kind !== 'string' || kind.length === 0) {
+                    throw new Error('TilePalette: запись "specialTiles" — поле "kind" должно быть непустой строкой.');
+                }
+                if (typeof sprite !== 'string' || sprite.length === 0) {
+                    throw new Error(`TilePalette: запись specialTiles kind="${kind}" — поле "sprite" должно быть непустой строкой.`);
+                }
+                if (typeof color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                    throw new Error(`TilePalette: запись specialTiles kind="${kind}" — поле "color" должно быть HEX-цветом вида #RRGGBB.`);
+                }
+                if (seenKinds.has(kind)) {
+                    throw new Error(`TilePalette: дубликат вида спец-тайла kind="${kind}".`);
+                }
+                seenKinds.add(kind);
+                specialEntries.push({ kind, sprite, color });
+            }
+        }
+
+        return { entries: entries, specialEntries: specialEntries };
     }
 
     // ------------------------------------------------------------------
     // Загрузка спрайтов
     // ------------------------------------------------------------------
 
-    /** Параллельно грузит все SpriteFrame; ошибки загрузки не фатальны — сработает резервный цвет. */
-    private loadFrames(entries: TileSpriteEntry[], onComplete: (palette: TilePalette | null, error: string | null) => void): void {
+    /** Параллельно грузит все SpriteFrame (включая спец-тайлы); ошибки не фатальны — сработает резервный цвет. */
+    private loadFrames(
+        entries: TileSpriteEntry[],
+        specialEntries: SpecialTileSpriteEntry[],
+        onComplete: (palette: TilePalette | null, error: string | null) => void
+    ): void {
         const frames: Map<number, cc.SpriteFrame> = new Map<number, cc.SpriteFrame>();
-        let pending = entries.length;
+        const specialFrames: Map<string, cc.SpriteFrame> = new Map<string, cc.SpriteFrame>();
+        let pending = entries.length + specialEntries.length;
         if (pending === 0) {
             onComplete(new TilePalette(entries, frames), null);
             return;
         }
+
+        const onOneLoaded = () => {
+            pending--;
+            if (pending === 0) {
+                onComplete(new TilePalette(entries, frames, specialEntries, specialFrames), null);
+            }
+        };
 
         for (const entry of entries) {
             cc.resources.load(entry.sprite, cc.SpriteFrame, (err: Error | null, frame: cc.SpriteFrame) => {
@@ -148,10 +240,18 @@ export class TilePaletteLoader {
                 } else {
                     frames.set(entry.colorIndex, frame);
                 }
-                pending--;
-                if (pending === 0) {
-                    onComplete(new TilePalette(entries, frames), null);
+                onOneLoaded();
+            });
+        }
+
+        for (const special of specialEntries) {
+            cc.resources.load(special.sprite, cc.SpriteFrame, (err: Error | null, frame: cc.SpriteFrame) => {
+                if (err || !frame) {
+                    cc.warn(`TilePalette: спрайт спец-тайла "${special.sprite}" (kind="${special.kind}") не загружен (${err ? err.message : 'не найден'}), будет использована тонировка ${special.color}.`);
+                } else {
+                    specialFrames.set(special.kind, frame);
                 }
+                onOneLoaded();
             });
         }
     }

@@ -59,7 +59,7 @@ export class GameBootstrapper {
         }
 
         // Core.
-        const board = new BoardModel(config.board.width, config.board.height, config.board.colorsCount);
+        const board = new BoardModel(config.board.width, config.board.height, config.board.colorsCount, Math.random, config.superTile);
         const game = new GameManager(board, config);
 
         // View (подписывается на события модели; тайлы спавнит из префаба).

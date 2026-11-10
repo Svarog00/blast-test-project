@@ -5,5 +5,8 @@
         { "colorIndex": 2, "sprite": "Texture/Tiles/block_red", "color": "#E74C3C" },
         { "colorIndex": 3, "sprite": "Texture/Tiles/block_yellow", "color": "#F1C40F" },
         { "colorIndex": 4, "sprite": "Texture/Tiles/block_purpure", "color": "#9B59B6" }
+    ],
+    "specialTiles": [
+        { "kind": "super", "sprite": "Texture/Tiles/block_bomb", "color": "#2C3E50" }
     ]
 }

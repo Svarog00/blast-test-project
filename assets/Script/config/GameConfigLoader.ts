@@ -1,4 +1,4 @@
-import { GameConfig, BoardConfig, GoalConfig, ScoringConfig, VisualConfig } from './GameConfig';
+import { GameConfig, BoardConfig, GoalConfig, ScoringConfig, SuperTileConfig, VisualConfig } from './GameConfig';
 
 /**
  * Загружает игровой конфиг из resources и валидирует его.
@@ -43,6 +43,7 @@ export class GameConfigLoader {
         const board = this.readSection(data, 'board');
         const goal = this.readSection(data, 'goal');
         const scoring = this.readSection(data, 'scoring');
+        const superTile = this.readSection(data, 'superTile');
         const visual = this.readSection(data, 'visual');
 
         const width = this.readPositiveInt(board, 'width', 'board');
@@ -58,6 +59,9 @@ export class GameConfigLoader {
         const basePerTile = this.readPositiveNumber(scoring, 'basePerTile', 'scoring');
         const chainBonusMultiplier = this.readNonNegativeNumber(scoring, 'chainBonusMultiplier', 'scoring');
 
+        const groupThreshold = this.readPositiveInt(superTile, 'groupThreshold', 'superTile');
+        const blastRadius = Math.floor(this.readNonNegativeNumber(superTile, 'blastRadius', 'superTile'));
+
         const tileSize = this.readPositiveNumber(visual, 'tileSize', 'visual');
         const animBurnDuration = this.readNonNegativeNumber(visual, 'animBurnDuration', 'visual');
         const animFallDuration = this.readNonNegativeNumber(visual, 'animFallDuration', 'visual');
@@ -66,6 +70,7 @@ export class GameConfigLoader {
             board: { width, height, colorsCount } as BoardConfig,
             goal: { targetScore, movesLimit } as GoalConfig,
             scoring: { basePerTile, chainBonusMultiplier } as ScoringConfig,
+            superTile: { groupThreshold, blastRadius } as SuperTileConfig,
             visual: { tileSize, animBurnDuration, animFallDuration } as VisualConfig
         };
     }

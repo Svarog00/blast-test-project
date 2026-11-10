@@ -58,7 +58,11 @@ export class TileView extends cc.Component {
         this.tile = tile;
         this.palette = palette;
 
-        this.setColorIndex(tile.colorIndex);
+        if (tile.isSuper) {
+            this.setSuperSprite();
+        } else {
+            this.setColorIndex(tile.colorIndex);
+        }
 
         this.node.off(cc.Node.EventType.TOUCH_END, this.handleClick, this);
         this.node.on(cc.Node.EventType.TOUCH_END, this.handleClick, this);
@@ -80,6 +84,26 @@ export class TileView extends cc.Component {
         // Резерв: белая заглушка, тонированная цветом из палитры.
         this.sprite.spriteFrame = getWhiteSpriteFrame();
         const fallback = this.palette ? this.palette.getFallbackColor(colorIndex) : null;
+        this.node.color = fallback || cc.Color.WHITE;
+    }
+
+    /** Спрайт супер-тайла из палитры; при отсутствии — тонировка резервным цветом. */
+    private setSuperSprite(): void {
+        if (!this.sprite) {
+            return;
+        }
+
+        const kind = TilePalette.SPECIAL_SUPER;
+        const frame = this.palette ? this.palette.getSpecialFrame(kind) : null;
+        if (frame) {
+            this.sprite.spriteFrame = frame;
+            this.node.color = cc.Color.WHITE;
+            return;
+        }
+
+        // Резерв: белая заглушка, тонированная резервным цветом спец-тайла.
+        this.sprite.spriteFrame = getWhiteSpriteFrame();
+        const fallback = this.palette ? this.palette.getSpecialFallbackColor(kind) : null;
         this.node.color = fallback || cc.Color.WHITE;
     }
 

@@ -1,5 +1,7 @@
 import { EventEmitter } from './EventEmitter';
 import { TileModel } from './TileModel';
+import { SuperTileModel } from './SuperTileModel';
+import { SuperTileConfig } from '../config/GameConfig';
 
 /** Перемещение существующего тайла при гравитации. */
 export interface TileMove {
@@ -29,6 +31,14 @@ export interface TilesSpawnedPayload {
     initial: boolean;
 }
 
+/** Супер-тайл появился на месте клика (после сгорания достаточно большой группы). */
+export interface SuperTileCreatedPayload {
+    tile: TileModel;
+    /** Клетка клика — место появления супер-тайла. */
+    x: number;
+    y: number;
+}
+
 /**
  * Чистая модель игрового поля: сетка тайлов, поиск группы (flood fill),
  * гравитация и заполнение пустот сверху. Не знает ни о движке, ни об отображении.
@@ -42,6 +52,7 @@ export class BoardModel extends EventEmitter {
     public static readonly EVENT_TILES_REMOVED = 'tilesRemoved';
     public static readonly EVENT_TILES_MOVED = 'tilesMoved';
     public static readonly EVENT_TILES_SPAWNED = 'tilesSpawned';
+    public static readonly EVENT_SUPER_TILE_CREATED = 'superTileCreated';
 
     public readonly width: number;
     public readonly height: number;
@@ -50,15 +61,32 @@ export class BoardModel extends EventEmitter {
     /** Функция генерации случайных чисел — инъекция для тестируемости. */
     private random: () => number;
 
+    /**
+     * Порог размера группы: если сгорело БОЛЬШЕ тайлов — на месте клика
+     * появляется супер-тайл. Infinity (конфиг не задан) — механика выключена.
+     */
+    private superGroupThreshold: number;
+
+    /** Радиус взрыва супер-тайла в клетках (Чебышёв: max(|dx|, |dy|) <= R). */
+    private superBlastRadius: number;
+
     /** Сетка тайлов: grid[y][x], y = 0 — нижняя строка. */
     private grid: (TileModel | null)[][] = [];
 
-    constructor(width: number, height: number, colorsCount: number, random: () => number = Math.random) {
+    constructor(
+        width: number,
+        height: number,
+        colorsCount: number,
+        random: () => number = Math.random,
+        superTile?: SuperTileConfig
+    ) {
         super();
         this.width = width;
         this.height = height;
         this.colorsCount = colorsCount;
         this.random = random;
+        this.superGroupThreshold = superTile ? superTile.groupThreshold : Number.POSITIVE_INFINITY;
+        this.superBlastRadius = superTile ? Math.max(0, Math.floor(superTile.blastRadius)) : 0;
     }
 
     /** Первичная генерация поля. */
@@ -134,9 +162,26 @@ export class BoardModel extends EventEmitter {
 
     /**
      * Сжигает группу тайлов, к которой принадлежит ячейка, и применяет гравитацию.
+     *
+     * Два сценария:
+     * 1. Клик по супер-тайлу — взрыв: сжигаются все тайлы в радиусе R вокруг него.
+     * 2. Клик по обычному тайлу — сгорает его цветовая группа; если группа
+     *    БОЛЬШЕ порога N, на месте клика появляется супер-тайл.
+     *
      * @returns сгоревшие тайлы или null, если клик не образует группу из 2+ тайлов.
      */
     public removeGroup(x: number, y: number): TileModel[] | null {
+        const start = this.getTile(x, y);
+        if (!start) {
+            return null;
+        }
+
+        // Спец-тайл применяет свой эффект вместо обычного поиска группы:
+        // логика эффекта принадлежит классу тайла, поле лишь выполняет её.
+        if (start instanceof SuperTileModel) {
+            return this.applyTileEffect(start);
+        }
+
         const group = this.findGroup(x, y);
         if (!group) {
             return null;
@@ -146,6 +191,11 @@ export class BoardModel extends EventEmitter {
             this.grid[tile.y][tile.x] = null;
         }
         this.emit(BoardModel.EVENT_TILES_REMOVED, { tiles: group } as TilesRemovedPayload);
+
+        // Механика «супер-тайла»: достаточно большая группа оставляет бомбу на месте клика.
+        if (group.length > this.superGroupThreshold) {
+            this.spawnSuperTile(x, y);
+        }
 
         this.applyGravity();
         return group;
@@ -158,6 +208,10 @@ export class BoardModel extends EventEmitter {
                 const tile = this.grid[y][x];
                 if (!tile) {
                     continue;
+                }
+                // Супер-тайл взрывается в любой момент — ход всегда доступен.
+                if (tile.isSuper) {
+                    return true;
                 }
                 const right = this.getTile(x + 1, y);
                 if (right && right.colorIndex === tile.colorIndex) {
@@ -222,13 +276,45 @@ export class BoardModel extends EventEmitter {
     private createTile(x: number, y: number): TileModel {
         const colorIndex = Math.floor(this.random() * this.colorsCount);
         const tile = new TileModel(x, y, colorIndex);
+        this.attachClickForwarding(tile);
+        return tile;
+    }
 
-        // Агрегируем событие клика тайла: подписчикам поля не нужно
-        // обходить все тайлы — клик приходит одной транзакцией от поля.
+    /** Создаёт супер-тайл на месте клика и сообщает об этом визуальному слою. */
+    private spawnSuperTile(x: number, y: number): void {
+        const tile = new SuperTileModel(x, y, this.superBlastRadius);
+        this.attachClickForwarding(tile);
+        this.grid[y][x] = tile;
+        this.emit(BoardModel.EVENT_SUPER_TILE_CREATED, { tile: tile, x: x, y: y } as SuperTileCreatedPayload);
+    }
+
+    /**
+     * Применяет эффект спец-тайла к полю: сам тайл меняет доску через
+     * ExecuteEffect, поле сообщает визуальному слою о сгоревших тайлах
+     * и применяет гравитацию.
+     */
+    private applyTileEffect(tile: SuperTileModel): TileModel[] {
+        const burned = tile.ExecuteEffect(this);
+        return burned;
+    }
+
+    /** Убирает перечисленные тайлы с поля (без событий и гравитации). */
+    public clearTiles(tiles: TileModel[]): void {
+        for (const tile of tiles) {
+            if (this.isInside(tile.x, tile.y) && this.grid[tile.y][tile.x] === tile) {
+                this.grid[tile.y][tile.x] = null;
+            }
+        }
+        
+        this.emit(BoardModel.EVENT_TILES_REMOVED, { tiles: tiles } as TilesRemovedPayload);
+        this.applyGravity();
+    }
+
+    // Агрегируем событие клика тайла: подписчикам поля не нужно
+    // обходить все тайлы — клик приходит одной транзакцией от поля.
+    private attachClickForwarding(tile: TileModel): void {
         tile.on(TileModel.EVENT_CLICKED, (clickedTile: TileModel) => {
             this.emit(BoardModel.EVENT_TILE_CLICKED, clickedTile);
         });
-
-        return tile;
     }
 }

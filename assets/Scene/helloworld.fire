@@ -938,19 +938,19 @@
       "__uuid__": "fc86c44a-26a7-4f8c-9f44-75860e4aa1a0"
     },
     "_N$pressedSprite": {
-      "__uuid__": "e9ec654c-97a2-4787-9325-e6a10375219a"
+      "__uuid__": "fc86c44a-26a7-4f8c-9f44-75860e4aa1a0"
     },
     "pressedSprite": {
-      "__uuid__": "e9ec654c-97a2-4787-9325-e6a10375219a"
+      "__uuid__": "fc86c44a-26a7-4f8c-9f44-75860e4aa1a0"
     },
     "_N$hoverSprite": {
-      "__uuid__": "f0048c10-f03e-4c97-b9d3-3506e1d58952"
+      "__uuid__": "fc86c44a-26a7-4f8c-9f44-75860e4aa1a0"
     },
     "hoverSprite": {
-      "__uuid__": "f0048c10-f03e-4c97-b9d3-3506e1d58952"
+      "__uuid__": "fc86c44a-26a7-4f8c-9f44-75860e4aa1a0"
     },
     "_N$disabledSprite": {
-      "__uuid__": "29158224-f8dd-4661-a796-1ffab537140e"
+      "__uuid__": "fc86c44a-26a7-4f8c-9f44-75860e4aa1a0"
     },
     "_N$target": {
       "__id__": 12

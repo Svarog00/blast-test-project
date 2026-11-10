@@ -24,6 +24,14 @@ export interface ScoringConfig {
     chainBonusMultiplier: number;
 }
 
+/** Механика «супер-тайла»: большая группа оставляет бомбу, взрывающуюся по радиусу. */
+export interface SuperTileConfig {
+    /** Если размер сжигаемой группы БОЛЬШЕ этого значения — на месте клика появится супер-тайл. */
+    groupThreshold: number;
+    /** Радиус взрыва супер-тайла в клетках. */
+    blastRadius: number;
+}
+
 /** Визуальные параметры: поле подстраивается под размеры из правил. */
 export interface VisualConfig {
     tileSize: number;
@@ -35,5 +43,6 @@ export interface GameConfig {
     board: BoardConfig;
     goal: GoalConfig;
     scoring: ScoringConfig;
+    superTile: SuperTileConfig;
     visual: VisualConfig;
 }

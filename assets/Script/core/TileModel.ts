@@ -24,6 +24,12 @@ export class TileModel extends EventEmitter {
 
     public readonly colorIndex: number;
 
+    /**
+     * Признак спец-тайла; переопределяется в наследниках (SuperTileModel).
+     * Обычный цветовой тайл — не спец-тайл.
+     */
+    public readonly isSuper: boolean = false;
+
     constructor(x: number, y: number, colorIndex: number) {
         super();
         this.id = TileModel.nextId++;

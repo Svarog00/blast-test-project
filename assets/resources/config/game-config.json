@@ -10,12 +10,17 @@
         "targetScore": 3000, 
         "movesLimit": 20 
     },
-    "scoring": 
-    { 
-        "basePerTile": 10, 
-        "chainBonusMultiplier": 1 
+    "scoring":
+    {
+        "basePerTile": 10,
+        "chainBonusMultiplier": 1
     },
-    "visual": 
+    "superTile":
+    {
+        "groupThreshold": 5,
+        "blastRadius": 2
+    },
+    "visual":
     { 
         "tileSize": 64, 
         "animBurnDuration": 0.15, 
