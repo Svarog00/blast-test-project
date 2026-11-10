@@ -681,7 +681,7 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 600,
+      "width": 550,
       "height": 250
     },
     "_anchorPoint": {
@@ -764,7 +764,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        -135,
+        -125,
         17.769000000000005,
         0,
         0,
@@ -987,7 +987,7 @@
     "_target": null,
     "_alignFlags": 37,
     "_left": 50.361000000000004,
-    "_right": 360,
+    "_right": 325,
     "_top": 32.230999999999995,
     "_bottom": 67.769,
     "_verticalCenter": 0,
@@ -1045,8 +1045,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 267,
-      "height": 113
+      "width": 250,
+      "height": 150
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1057,7 +1057,7 @@
       "__type__": "TypedArray",
       "ctor": "Float64Array",
       "array": [
-        73.5,
+        75,
         19.665999999999997,
         0,
         0,
@@ -1116,7 +1116,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 97.87,
-      "height": 50.4
+      "height": 50.400000000000006
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1198,10 +1198,10 @@
       "__id__": 23
     },
     "_alignFlags": 45,
-    "_left": 84.565,
-    "_right": 84.565,
-    "_top": 31.3,
-    "_bottom": 31.3,
+    "_left": 76.065,
+    "_right": 76.065,
+    "_top": 49.8,
+    "_bottom": 49.8,
     "_verticalCenter": 0,
     "_horizontalCenter": 0,
     "_isAbsLeft": true,
@@ -1281,8 +1281,8 @@
     "_alignFlags": 5,
     "_left": 289.498,
     "_right": 0,
-    "_top": 48.834,
-    "_bottom": 88.166,
+    "_top": 30.334000000000003,
+    "_bottom": 69.666,
     "_verticalCenter": 0,
     "_horizontalCenter": 0,
     "_isAbsLeft": true,
@@ -1347,8 +1347,8 @@
     "alignMode": 1,
     "_target": null,
     "_alignFlags": 41,
-    "_left": 19.451000000000022,
-    "_right": 20.548999999999978,
+    "_left": 44.45100000000002,
+    "_right": 45.54899999999998,
     "_top": -0.1730000000000036,
     "_bottom": -29,
     "_verticalCenter": 0,
@@ -1373,7 +1373,7 @@
     "_enabled": true,
     "_layoutSize": {
       "__type__": "cc.Size",
-      "width": 600,
+      "width": 550,
       "height": 250
     },
     "_resize": 0,
@@ -1384,7 +1384,7 @@
       "height": 40
     },
     "_N$startAxis": 0,
-    "_N$paddingLeft": 90,
+    "_N$paddingLeft": 75,
     "_N$paddingRight": 0,
     "_N$paddingTop": 0,
     "_N$paddingBottom": 0,
