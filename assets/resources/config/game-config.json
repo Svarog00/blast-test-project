@@ -17,7 +17,7 @@
     },
     "superTile":
     {
-        "groupThreshold": 5,
+        "groupThreshold": 4,
         "blastRadius": 2
     },
     "visual":
