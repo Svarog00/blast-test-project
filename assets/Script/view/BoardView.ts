@@ -9,7 +9,7 @@ import {
 } from '../core/BoardModel';
 import { TileModel } from '../core/TileModel';
 import { VisualConfig } from '../config/GameConfig';
-import { TilePalette } from '../config/TilePalette';
+import { TileFactory } from './TileFactory';
 import { TileView } from './TileView';
 
 const { ccclass, property } = cc._decorator;
@@ -21,33 +21,28 @@ const { ccclass, property } = cc._decorator;
  * через колбэк (связывание выполняет GameBootstrapper).
  *
  * Префаб тайла задаётся сериализованно через @property (заполняется в
- * редакторе в инспекторе префаба). Рантайм-данные (модель, палитра,
- * визуальные параметры из конфига) сериализовать нельзя — они создаются
- * в рантайме и передаются через init() из GameBootstrapper.
+ * редакторе в инспекторе префаба) — из него GameBootstrapper собирает
+ * TileFactory. Создание самих тайлов инкапсулировано в фабрике: BoardView
+ * содержит только вызовы TileFactory.create().
+ *
+ * Рантайм-данные (модель, фабрика тайлов, визуальные параметры из конфига)
+ * сериализовать нельзя — они создаются в рантайме и передаются через init()
+ * из GameBootstrapper.
  */
 @ccclass
 export class BoardView extends cc.Component {
 
-    /** Отношение визуального размера тайла к шагу сетки (зазор между тайлами). */
-    private static readonly TILE_FILL: number = 0.9;
-
-    private readonly defaultTileScale : number = 1.0;
-
-    /** Префаб тайла — ссылка задаётся сериализованно в префабе. */
+    /** Префаб обычного тайла — ссылка задаётся сериализованно в префабе (используется GameBootstrapper для сборки TileFactory). */
     @property(cc.Prefab)
     public readonly tilePrefab: cc.Prefab = null;
+
+    /** Префаб супер-тайла — ссылка задаётся сериализованно в префабе (используется GameBootstrapper для сборки TileFactory). */
+    @property(cc.Prefab)
+    public readonly superTilePrefab: cc.Prefab = null;
     
     @property(cc.Node)
     private rootNode : cc.Node = null;
 
-    
-    @property
-    private superTileInAnimationTime : number = 0.45;
-    @property
-    private superTileOutAnimationTime : number = 0.45;
-
-    @property
-    private maxTileScaleAnimation : number = 1.12;
 
     private tileSize: number = 0;
     private cols: number = 0;
@@ -64,7 +59,8 @@ export class BoardView extends cc.Component {
     /** Супер-тайлы, ожидающие появления после анимации сгорания. */
     private pendingSuperSpawns: SuperTileCreatedPayload[] = [];
 
-    private palette: TilePalette = null;
+    /** Фабрика тайлов — создаётся и передаётся GameBootstrapper'ом. */
+    private tileFactory: TileFactory = null;
     private onAnimationsCompleted: () => void = null;
     private board: BoardModel = null;
 
@@ -81,7 +77,7 @@ export class BoardView extends cc.Component {
     public init(
         board: BoardModel,
         visual: VisualConfig,
-        palette: TilePalette,
+        tileFactory: TileFactory,
         onAnimationsCompleted: () => void
     ): void {
         this.board = board;
@@ -90,7 +86,7 @@ export class BoardView extends cc.Component {
         this.rows = board.height;
         this.burnDuration = visual.animBurnDuration;
         this.fallDuration = visual.animFallDuration;
-        this.palette = palette;
+        this.tileFactory = tileFactory;
         this.onAnimationsCompleted = onAnimationsCompleted;
 
         board.on(BoardModel.EVENT_TILES_SPAWNED, this.handleTilesSpawned);
@@ -210,31 +206,13 @@ export class BoardView extends cc.Component {
     // ------------------------------------------------------------------
 
     private createView(tile: TileModel): TileView {
-        // Спавн через создание экземпляра префаба: узел и сериализованные
-        // свойства TileView (sprite и т.п.) приходят из префаба.
-        const node = cc.instantiate(this.tilePrefab);
-        node.setParent(this.rootNode);
-        node.setContentSize(this.tileSize * BoardView.TILE_FILL, this.tileSize * BoardView.TILE_FILL);
-
-        const view = node.getComponent(TileView);
-        view.init(tile, this.palette);
+        // Создание визуала делегировано фабрике: инстанцирование префаба,
+        // привязка модели/палитры и добавление в контейнер — внутри TileFactory.
+        // Анимация супер-тайла запускается самим TileView в start()
+        // (после активации узла на сцене) — BoardView в неё не вмешивается.
+        const view = this.tileFactory.create(tile);
         this.views.set(tile.id, view);
-
-        if (tile.isSuper) {
-            this.startSuperPulse(view);
-        }
         return view;
-    }
-
-    /** Пульсация супер-тайла — визуальное выделение; останавливается при сгорании. */
-    private startSuperPulse(view: TileView): void {
-        cc.tween(view.node)
-            .repeatForever(
-                cc.tween()
-                    .to(this.superTileInAnimationTime, { scale: this.maxTileScaleAnimation })
-                    .to(this.superTileOutAnimationTime, { scale: this.defaultTileScale })
-            )
-            .start();
     }
 
     private clearViews(): void {
@@ -242,6 +220,11 @@ export class BoardView extends cc.Component {
             view.node.destroy();
         });
         this.views.clear();
+    }
+
+    /** Узел-контейнер тайлов (используется GameBootstrapper'ом при сборке TileFactory). */
+    public get containerNode(): cc.Node {
+        return this.rootNode;
     }
 
     /** Позиция центра ячейки (x, y) относительно центра поля. */

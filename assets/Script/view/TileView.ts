@@ -10,6 +10,11 @@ const { ccclass, property } = cc._decorator;
  * (метод handleClick). Никакой игровой логики: клик передаётся логике
  * самого тайла (TileModel.click()), дальше событие уходит в модель поля.
  *
+ * Внешность тайла определяется в защищённом методе updateAppearance():
+ * базовый класс красит тайл по colorIndex; специфичную для спец-тайлов
+ * внешность добавляют наследники (например SuperTileView — спрайт бомбы
+ * и пульсация), переопределяя этот метод (Open/Closed).
+ *
  * Зависимости берутся из сериализованных свойств (заполняются в префабе
  * в редакторе): cc.Sprite берётся из @property, а не через getComponent.
  * Модель и палитра приходят извне через init() — их сериализовать нельзя
@@ -45,27 +50,31 @@ export class TileView extends cc.Component {
 
     /** Спрайт тайла — ссылка задаётся сериализованно в префабе (без getComponent). */
     @property(cc.Sprite)
-    private sprite: cc.Sprite = null;
+    protected sprite: cc.Sprite = null;
 
-    private tile: TileModel | null = null;
-    private palette: TilePalette | null = null;
+    protected tile: TileModel | null = null;
+    protected palette: TilePalette | null = null;
 
     /**
-     * Привязка модели и палитры; выполняется BoardView сразу после
-     * Instantiate экземпляра префаба.
+     * Привязка модели и палитры; выполняется BoardView (через TileFactory)
+     * сразу после Instantiate экземпляра префаба.
      */
     public init(tile: TileModel, palette: TilePalette): void {
         this.tile = tile;
         this.palette = palette;
 
-        if (tile.isSuper) {
-            this.setSuperSprite();
-        } else {
-            this.setColorIndex(tile.colorIndex);
-        }
+        this.updateAppearance();
 
         this.node.off(cc.Node.EventType.TOUCH_END, this.handleClick, this);
         this.node.on(cc.Node.EventType.TOUCH_END, this.handleClick, this);
+    }
+
+    /**
+     * Внешность тайла по модели. Базовая реализация — спрайт цвета тайла;
+     * наследники (спец-тайлы) переопределяют под своё поведение.
+     */
+    protected updateAppearance(): void {
+        this.setColorIndex(this.tile.colorIndex);
     }
 
     /** Выбор спрайта, соответствующего цвету тайла; при отсутствии — тонировка. */
@@ -84,26 +93,6 @@ export class TileView extends cc.Component {
         // Резерв: белая заглушка, тонированная цветом из палитры.
         this.sprite.spriteFrame = getWhiteSpriteFrame();
         const fallback = this.palette ? this.palette.getFallbackColor(colorIndex) : null;
-        this.node.color = fallback || cc.Color.WHITE;
-    }
-
-    /** Спрайт супер-тайла из палитры; при отсутствии — тонировка резервным цветом. */
-    private setSuperSprite(): void {
-        if (!this.sprite) {
-            return;
-        }
-
-        const kind = TilePalette.SPECIAL_SUPER;
-        const frame = this.palette ? this.palette.getSpecialFrame(kind) : null;
-        if (frame) {
-            this.sprite.spriteFrame = frame;
-            this.node.color = cc.Color.WHITE;
-            return;
-        }
-
-        // Резерв: белая заглушка, тонированная резервным цветом спец-тайла.
-        this.sprite.spriteFrame = getWhiteSpriteFrame();
-        const fallback = this.palette ? this.palette.getSpecialFallbackColor(kind) : null;
         this.node.color = fallback || cc.Color.WHITE;
     }
 

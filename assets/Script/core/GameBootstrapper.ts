@@ -4,6 +4,7 @@ import { TilePalette, TilePaletteLoader } from '../config/TilePalette';
 import { BoardModel } from './BoardModel';
 import { GameManager } from './GameManager';
 import { BoardView } from '../view/BoardView';
+import { TileFactory } from '../view/TileFactory';
 import UiController from '../view/UiController';
 
 /**
@@ -50,6 +51,10 @@ export class GameBootstrapper {
     // ------------------------------------------------------------------
 
     private startGame(config: GameConfig, palette: TilePalette): void {
+        // Фабрика тайлов: собирается здесь (composition root) из обоих
+        // префабов, сериализованных в BoardView, палитры спрайтов и
+        // визуального конфига. Какой префаб использовать для конкретного
+        // тайла, фабрика решает сама — по модели (TileModel.isSuper).
         if (!this.boardView.tilePrefab) {
             this.ui.showError(
                 'У компонента BoardView не задан tilePrefab — укажите ссылку на ' +
@@ -57,13 +62,27 @@ export class GameBootstrapper {
             );
             return;
         }
+        if (!this.boardView.superTilePrefab) {
+            this.ui.showError(
+                'У компонента BoardView не задан superTilePrefab — укажите ссылку на ' +
+                'prefab/SuperTile в инспекторе префаба BoardContainer.prefab.'
+            );
+            return;
+        }
+        const tileFactory = new TileFactory({
+            tilePrefab: this.boardView.tilePrefab,
+            superTilePrefab: this.boardView.superTilePrefab,
+            palette: palette,
+            tileSize: config.visual.tileSize,
+            container: this.boardView.containerNode
+        });
 
         // Core.
         const board = new BoardModel(config.board.width, config.board.height, config.board.colorsCount, Math.random, config.superTile);
         const game = new GameManager(board, config);
 
-        // View (подписывается на события модели; тайлы спавнит из префаба).
-        this.boardView.init(board, config.visual, palette, () => {
+        // View (подписывается на события модели; тайлы создаёт TileFactory).
+        this.boardView.init(board, config.visual, tileFactory, () => {
             game.onAnimationsCompleted();
         });
         this.ui.bindGame(game, config);

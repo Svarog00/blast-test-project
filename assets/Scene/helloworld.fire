@@ -152,12 +152,12 @@
     "tilePrefab": {
       "__uuid__": "fbf9ed57-7cfc-4f3e-9a02-83fbbe0bef67"
     },
+    "superTilePrefab": {
+      "__uuid__": "c6e227ad-4966-42ce-9ed2-0e5ea851e3e8"
+    },
     "rootNode": {
       "__id__": 62
     },
-    "superTileInAnimationTime": 0.45,
-    "superTileOutAnimationTime": 0.45,
-    "maxTileScaleAnimation": 1.12,
     "_id": "b47WqW9AVLZpmsEVlETumt"
   },
   {
