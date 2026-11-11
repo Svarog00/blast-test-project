@@ -31,12 +31,23 @@ export class BoardView extends cc.Component {
     /** Отношение визуального размера тайла к шагу сетки (зазор между тайлами). */
     private static readonly TILE_FILL: number = 0.9;
 
+    private readonly defaultTileScale : number = 1.0;
+
     /** Префаб тайла — ссылка задаётся сериализованно в префабе. */
-    @property(cc.Prefab)
-    public readonly tilePrefab: cc.Prefab = null;
+    @property
+    public readonly tilePrefab: TileView = null;
     
     @property(cc.Node)
     private rootNode : cc.Node = null;
+
+    
+    @property
+    private superTileInAnimationTime : number = 0.45;
+    @property
+    private superTileOutAnimationTime : number = 0.45;
+
+    @property
+    private maxTileScaleAnimation : number = 1.12;
 
     private tileSize: number = 0;
     private cols: number = 0;
@@ -220,8 +231,8 @@ export class BoardView extends cc.Component {
         cc.tween(view.node)
             .repeatForever(
                 cc.tween()
-                    .to(0.45, { scale: 1.12 })
-                    .to(0.45, { scale: 1.0 })
+                    .to(this.superTileInAnimationTime, { scale: this.maxTileScaleAnimation })
+                    .to(this.superTileOutAnimationTime, { scale: this.defaultTileScale })
             )
             .start();
     }
