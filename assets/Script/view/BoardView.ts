@@ -34,8 +34,8 @@ export class BoardView extends cc.Component {
     private readonly defaultTileScale : number = 1.0;
 
     /** Префаб тайла — ссылка задаётся сериализованно в префабе. */
-    @property
-    public readonly tilePrefab: TileView = null;
+    @property(cc.Prefab)
+    public readonly tilePrefab: cc.Prefab = null;
     
     @property(cc.Node)
     private rootNode : cc.Node = null;
