@@ -1,2 +1,2 @@
-# hello-world
-Hello world new project template.
+#  Прототип игры в жанре “головоломка с механикой Blast”.
+ Тестовое задание на движке Cocos 2.4.15
