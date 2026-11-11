@@ -155,6 +155,9 @@
     "rootNode": {
       "__id__": 62
     },
+    "superTileInAnimationTime": 0.45,
+    "superTileOutAnimationTime": 0.45,
+    "maxTileScaleAnimation": 1.12,
     "_id": "b47WqW9AVLZpmsEVlETumt"
   },
   {
