@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>BlastTest</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #1b2432; color: #e8ecf1;
+      font-family: "Segoe UI", Arial, sans-serif; display: flex; align-items: center; justify-content: center; }
+    .box { text-align: center; }
+    a { color: #6fb3f2; text-decoration: none; font-size: 1.1em; line-height: 2; display: inline-block; }
+    a:hover { text-decoration: underline; }
+    .hint { color: #8a93a0; font-size: 0.85em; margin-top: 24px; }
+    h1 { font-size: 1.4em; font-weight: 600; }
+  </style>
+  <script>
+    // Автовыбор версии: тач-экран или узкий вьюпорт -> mobile-билд, иначе desktop-билд
+    (function () {
+      var isTouch = window.matchMedia("(pointer: coarse)").matches;
+      var isNarrow = window.innerWidth < 800 || window.innerHeight < 500;
+      if (isTouch || isNarrow) {
+        window.location.replace("./web-mobile/index.html");
+      } else {
+        window.location.replace("./web-desktop/index.html");
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="box">
+    <h1>BlastTest</h1>
+    <div>Идёт запуск игры…</div>
+    <div class="hint">
+      Если автоматический переход не сработал, откройте нужную версию вручную:<br>
+      <a href="./web-desktop/index.html">Десктопная версия</a><br>
+      <a href="./web-mobile/index.html">Мобильная версия</a>
+    </div>
+  </div>
+</body>
+</html>
