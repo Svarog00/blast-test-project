@@ -1,0 +1,6 @@
+{
+    "tiles": [
+        { "kind": "default", "prefab": "prefab/Tile" },
+        { "kind": "super", "prefab": "prefab/SuperTile" }
+    ]
+}

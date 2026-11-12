@@ -1,6 +1,7 @@
 import { GameConfigLoader } from '../config/GameConfigLoader';
 import { GameConfig } from '../config/GameConfig';
 import { TilePalette, TilePaletteLoader } from '../config/TilePalette';
+import { TilePrefabs, TilePrefabsLoader } from '../config/TilePrefabs';
 import { BoardModel } from './BoardModel';
 import { GameManager } from './GameManager';
 import { BoardView } from '../view/BoardView';
@@ -13,10 +14,12 @@ import UiController from '../view/UiController';
  *
  * 1. Загружает и валидирует конфиг через GameConfigLoader.
  * 2. Создаёт core: BoardModel, GameManager (конфиг — через конструктор, DIP).
- * 3. Берёт BoardView-компонент из префаба BoardContainer.prefab (сериализованная
- *    ссылка на Tile.prefab задаётся в редакторе) и связывает его с моделью через init().
- * 4. Связывает слои через события: модель → view, GameManager → UiController.
- * 5. Связывает ввод: клик инициируется логикой тайла (TileView → TileModel →
+ * 3. Загружает data-ассеты префабов (tile-prefabs.json) и спрайтов тайлов
+ *    (tile-palette.json), собирает из них TileFactory.
+ * 4. Берёт BoardView-компонент из префаба BoardContainer.prefab и связывает
+ *    его с моделью через init().
+ * 5. Связывает слои через события: модель → view, GameManager → UiController.
+ * 6. Связывает ввод: клик инициируется логикой тайла (TileView → TileModel →
  *    BoardModel) и транслируется в GameManager.
  */
 export class GameBootstrapper {
@@ -29,7 +32,7 @@ export class GameBootstrapper {
         this.ui = ui;
     }
 
-    /** Точка запуска: загрузка конфига и палитры тайлов, затем сборка игры. */
+    /** Точка запуска: загрузка конфига, палитры и префабов тайлов, затем сборка игры. */
     public bootstrap(): void {
         new GameConfigLoader().load((config: GameConfig | null, error: string | null) => {
             if (!config) {
@@ -41,7 +44,13 @@ export class GameBootstrapper {
                     this.ui.showError(paletteError || 'Неизвестная ошибка палитры тайлов.');
                     return;
                 }
-                this.startGame(config, palette);
+                new TilePrefabsLoader().load((prefabs: TilePrefabs | null, prefabsError: string | null) => {
+                    if (!prefabs) {
+                        this.ui.showError(prefabsError || 'Неизвестная ошибка конфигурации префабов тайлов.');
+                        return;
+                    }
+                    this.startGame(config, palette, prefabs);
+                });
             });
         });
     }
@@ -50,28 +59,13 @@ export class GameBootstrapper {
     // Сборка игры
     // ------------------------------------------------------------------
 
-    private startGame(config: GameConfig, palette: TilePalette): void {
-        // Фабрика тайлов: собирается здесь (composition root) из обоих
-        // префабов, сериализованных в BoardView, палитры спрайтов и
-        // визуального конфига. Какой префаб использовать для конкретного
+    private startGame(config: GameConfig, palette: TilePalette, prefabs: TilePrefabs): void {
+        // Фабрика тайлов: собирается здесь (composition root) из конфигурации
+        // префабов (tile-prefabs.json), палитры спрайтов (tile-palette.json)
+        // и визуального конфига. Какой префаб использовать для конкретного
         // тайла, фабрика решает сама — по модели (TileModel.isSuper).
-        if (!this.boardView.tilePrefab) {
-            this.ui.showError(
-                'У компонента BoardView не задан tilePrefab — укажите ссылку на ' +
-                'prefab/Tile в инспекторе префаба BoardContainer.prefab.'
-            );
-            return;
-        }
-        if (!this.boardView.superTilePrefab) {
-            this.ui.showError(
-                'У компонента BoardView не задан superTilePrefab — укажите ссылку на ' +
-                'prefab/SuperTile в инспекторе префаба BoardContainer.prefab.'
-            );
-            return;
-        }
         const tileFactory = new TileFactory({
-            tilePrefab: this.boardView.tilePrefab,
-            superTilePrefab: this.boardView.superTilePrefab,
+            prefabs: prefabs,
             palette: palette,
             tileSize: config.visual.tileSize,
             container: this.boardView.containerNode

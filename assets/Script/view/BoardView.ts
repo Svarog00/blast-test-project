@@ -20,10 +20,10 @@ const { ccclass, property } = cc._decorator;
  * подписывается на события модели и по завершении анимаций сообщает об этом
  * через колбэк (связывание выполняет GameBootstrapper).
  *
- * Префаб тайла задаётся сериализованно через @property (заполняется в
- * редакторе в инспекторе префаба) — из него GameBootstrapper собирает
- * TileFactory. Создание самих тайлов инкапсулировано в фабрике: BoardView
- * содержит только вызовы TileFactory.create().
+ * Префабы тайлов задаются не в инспекторе, а в data-ассете
+ * resources/config/tile-prefabs.json (TilePrefabsLoader) — GameBootstrapper
+ * собирает из них TileFactory. Создание самих тайлов инкапсулировано в
+ * фабрике: BoardView содержит только вызовы TileFactory.create().
  *
  * Рантайм-данные (модель, фабрика тайлов, визуальные параметры из конфига)
  * сериализовать нельзя — они создаются в рантайме и передаются через init()
@@ -32,14 +32,6 @@ const { ccclass, property } = cc._decorator;
 @ccclass
 export class BoardView extends cc.Component {
 
-    /** Префаб обычного тайла — ссылка задаётся сериализованно в префабе (используется GameBootstrapper для сборки TileFactory). */
-    @property(cc.Prefab)
-    public readonly tilePrefab: cc.Prefab = null;
-
-    /** Префаб супер-тайла — ссылка задаётся сериализованно в префабе (используется GameBootstrapper для сборки TileFactory). */
-    @property(cc.Prefab)
-    public readonly superTilePrefab: cc.Prefab = null;
-    
     @property(cc.Node)
     private rootNode : cc.Node = null;
 

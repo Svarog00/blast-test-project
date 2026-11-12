@@ -1,5 +1,6 @@
 import { TileModel } from '../core/TileModel';
 import { TilePalette } from '../config/TilePalette';
+import { TilePrefabs } from '../config/TilePrefabs';
 import { TileView } from './TileView';
 import { SuperTileView } from './SuperTileView';
 
@@ -11,22 +12,21 @@ import { SuperTileView } from './SuperTileView';
  * BoardView больше не знает, откуда берётся узел тайла, и содержит
  * только вызовы фабрики (create).
  *
- * Фабрика содержит ссылки на оба префаба (обычный тайл и супер-тайл)
- * и сама выбирает, какой визуал создавать, на основе модели тайла
- * (TileModel.isSuper): обычной модели соответствует TileView из
+ * Выбор префаба выполняется по data-ассету tile-prefabs.json (как выбор
+ * спрайта — по палитре текстур tile-palette.json): фабрика сама определяет
+ * вид тайла на основе модели (TileModel.isSuper) и берёт соответствующий
+ * префаб из TilePrefabs. Обычной модели соответствует TileView из
  * Tile.prefab, модели SuperTileModel — SuperTileView из SuperTile.prefab.
  *
  * Конфиг передаётся через конструктор (DI из GameBootstrapper):
- * префабы задаются сериализованно в BoardView, спрайты живут в палитре
- * (data-ассет tile-palette.json), размеры и контейнер — из визуального конфига.
+ * префабы живут в конфиге tile-prefabs.json, спрайты — в палитре
+ * (tile-palette.json), размеры и контейнер — из визуального конфига.
  */
 
 /** Конфигурация фабрики тайлов. */
 export interface TileFactoryConfig {
-    /** Префаб обычного тайла (сериализованная ссылка из BoardView). */
-    tilePrefab: cc.Prefab;
-    /** Префаб супер-тайла (сериализованная ссылка из BoardView). */
-    superTilePrefab: cc.Prefab;
+    /** Конфигурация префабов по видам тайлов (data-ассет tile-prefabs.json). */
+    prefabs: TilePrefabs;
     /** Палитра со спрайтами тайлов (data-ассет tile-palette.json). */
     palette: TilePalette;
     /** Визуальный размер тайла в пикселях (из GameConfig.visual.tileSize). */
@@ -46,11 +46,14 @@ export class TileFactory {
         if (!config) {
             throw new Error('TileFactory: конфигурация не передана.');
         }
-        if (!config.tilePrefab) {
-            throw new Error('TileFactory: не задан tilePrefab — укажите ссылку на prefab/Tile в инспекторе префаба BoardContainer.prefab.');
+        if (!config.prefabs) {
+            throw new Error('TileFactory: не задана конфигурация префабов (TilePrefabs).');
         }
-        if (!config.superTilePrefab) {
-            throw new Error('TileFactory: не задан superTilePrefab — укажите ссылку на prefab/SuperTile в инспекторе префаба BoardContainer.prefab.');
+        if (!config.prefabs.getPrefab(TilePrefabs.KIND_DEFAULT)) {
+            throw new Error('TileFactory: в конфигурации префабов отсутствует префаб вида "default" (prefab/Tile).');
+        }
+        if (!config.prefabs.getPrefab(TilePrefabs.KIND_SUPER)) {
+            throw new Error('TileFactory: в конфигурации префабов отсутствует префаб вида "super" (prefab/SuperTile).');
         }
         if (!config.palette) {
             throw new Error('TileFactory: не задана палитра тайлов (TilePalette).');
@@ -65,14 +68,15 @@ export class TileFactory {
     }
 
     /**
-     * Создаёт визуал тайла по модели: выбирает префаб на основе модели
-     * (обычный тайл или супер-тайл), инстанцирует его, привязывает модель
-     * и палитру и добавляет узел в контейнер.
+     * Создаёт визуал тайла по модели: определяет вид тайла, берёт
+     * соответствующий префаб из конфигурации, инстанцирует его, привязывает
+     * модель и палитру и добавляет узел в контейнер.
      */
     public create(tile: TileModel): TileView {
-        // Выбор префаба по модели: SuperTileModel → SuperTile.prefab
-        // (с компонентом SuperTileView), обычная модель → Tile.prefab.
-        const prefab = tile.isSuper ? this.config.superTilePrefab : this.config.tilePrefab;
+        // Выбор префаба по виду из конфигурации: SuperTileModel → вид "super"
+        // (prefab с компонентом SuperTileView), обычная модель → вид "default".
+        const kind = tile.isSuper ? TilePrefabs.KIND_SUPER : TilePrefabs.KIND_DEFAULT;
+        const prefab = this.config.prefabs.getPrefab(kind);
 
         // Спавн через создание экземпляра префаба: узел и сериализованные
         // свойства view (sprite и т.п.) приходят из префаба.
